@@ -37,15 +37,14 @@ long freq_accuracy[100000 + 1];
 void parse_options(int argc, char** argv, sim_t *sim);
 void init_sim_res(sim_t *sim);
 int set_sim_param(sim_t *sim);
-int get_ref_inf(sim_t *sim);
-int get_ref_seq(sim_t *sim, ref_t *ref);
-int get_fastq_inf(sim_t *sim);
-int set_model_qc(sim_t *sim);
+int get_ref_inf(const sim_t *sim);
+int get_ref_seq(const sim_t *sim, ref_t *ref);
+int get_fastq_inf(const sim_t *sim);
+int set_model_qc(const sim_t *sim);
 int set_mut(sim_t *sim);
 int simulate_by_sampling(sim_t *sim, ref_t *ref, mut_t *mut, fastq_t *fastq);
 int simulate_by_model(sim_t *sim);
 int mutate(sim_t *sim);
-
 
 /////////////////////////////////////////
 // Main                                //
@@ -420,7 +419,7 @@ void parse_options(int argc, char** argv, sim_t *sim)
 // Function: get_ref_inf - Get reference information //
 ///////////////////////////////////////////////////////
 
-int get_ref_inf(sim_t *sim) {
+int get_ref_inf(const sim_t *sim) {
   FILE *fp;
   char line[BUF_SIZE];
   int ret;
@@ -516,7 +515,7 @@ int get_ref_inf(sim_t *sim) {
 // Function: get_ref_seq - Get reference sequence //
 ////////////////////////////////////////////////////
 
-int get_ref_seq(sim_t *sim, ref_t *ref) {
+int get_ref_seq(const sim_t *sim, ref_t *ref) {
   FILE *fp;
   char line[BUF_SIZE];
   long offset = 0;
@@ -558,7 +557,7 @@ int get_ref_seq(sim_t *sim, ref_t *ref) {
 // Function: get_fastq_inf - Get FASTQ information //
 /////////////////////////////////////////////////////
 
-int get_fastq_inf(sim_t *sim) {
+int get_fastq_inf(const sim_t *sim) {
   FILE *fp;
   char *tp, *item;
   char line[BUF_SIZE];
@@ -1610,7 +1609,7 @@ int mutate(sim_t *sim) {
 // Function: set_model_qc - Set quality code model   //
 ///////////////////////////////////////////////////////
 
-int set_model_qc(sim_t *sim) {
+int set_model_qc(const sim_t *sim) {
   FILE *fp;
   char line[BUF_SIZE];
   char *tp;
