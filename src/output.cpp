@@ -8,50 +8,50 @@
 // Function: print_sim_param - Print simulation parameters //
 /////////////////////////////////////////////////////////////
 
-void print_sim_param(sim_t sim) {
+void print_sim_param(const sim_t *sim) {
   fprintf(stderr, ":::: Simulation parameters :::\n\n");
 
-  if (sim.process == PROCESS_MODEL) {
+  if (sim->process == PROCESS_MODEL) {
     fprintf(stderr, "Simulated by stochastic model.\n\n");
   } else {
     fprintf(stderr, "Simulated by fastq sampling.\n\n");
   }
 
-  fprintf(stderr, "prefix : %s\n", sim.prefix);
-  if (sim.set_flg[14]) {
-    fprintf(stderr, "sample_profile_id : %s\n", sim.profile_id);
+  fprintf(stderr, "prefix : %s\n", sim->prefix);
+  if (sim->set_flg[14]) {
+    fprintf(stderr, "sample_profile_id : %s\n", sim->profile_id);
   }
 
-  if (sim.data_type == DATA_TYPE_CLR) {
+  if (sim->data_type == DATA_TYPE_CLR) {
     fprintf(stderr, "data-type : CLR\n");
   } else {
     fprintf(stderr, "data-type : CCS\n");
   }
 
-  fprintf(stderr, "depth : %lf\n", sim.depth);
+  fprintf(stderr, "depth : %lf\n", sim->depth);
 
-  if (sim.set_flg[0]) {
+  if (sim->set_flg[0]) {
     fprintf(stderr, "length-mean : (sampling FASTQ)\n");
     fprintf(stderr, "length-sd : (sampling FASTQ)\n");
   } else {
-    fprintf(stderr, "length-mean : %f\n", sim.len_mean);
-    fprintf(stderr, "length-sd : %f\n", sim.len_sd);
+    fprintf(stderr, "length-mean : %f\n", sim->len_mean);
+    fprintf(stderr, "length-sd : %f\n", sim->len_sd);
   }
-  fprintf(stderr, "length-min : %ld\n", sim.len_min);
-  fprintf(stderr, "length-max : %ld\n", sim.len_max);
+  fprintf(stderr, "length-min : %ld\n", sim->len_min);
+  fprintf(stderr, "length-max : %ld\n", sim->len_max);
 
-  if (sim.set_flg[0]) {
+  if (sim->set_flg[0]) {
     fprintf(stderr, "accuracy-mean : (sampling FASTQ)\n");
     fprintf(stderr, "accuracy-sd : (sampling FASTQ)\n");
   } else {
-    fprintf(stderr, "accuracy-mean : %f\n", sim.accuracy_mean);
-    fprintf(stderr, "accuracy-sd : %f\n", sim.accuracy_sd);
+    fprintf(stderr, "accuracy-mean : %f\n", sim->accuracy_mean);
+    fprintf(stderr, "accuracy-sd : %f\n", sim->accuracy_sd);
   }
-  fprintf(stderr, "accuracy-min : %f\n", sim.accuracy_min);
-  fprintf(stderr, "accuracy-max : %f\n", sim.accuracy_max);
+  fprintf(stderr, "accuracy-min : %f\n", sim->accuracy_min);
+  fprintf(stderr, "accuracy-max : %f\n", sim->accuracy_max);
 
   fprintf(stderr, "difference-ratio : %ld:%ld:%ld\n",
-    sim.sub_ratio, sim.ins_ratio, sim.del_ratio);
+    sim->sub_ratio, sim->ins_ratio, sim->del_ratio);
 
   fprintf(stderr, "\n");
 }
@@ -60,29 +60,29 @@ void print_sim_param(sim_t sim) {
 // Function: print_fastq_stats - Print FASTQ stats //
 /////////////////////////////////////////////////////
 
-void print_fastq_stats(sim_t sim, fastq_t fastq) {
+void print_fastq_stats(const sim_t *sim, const fastq_t *fastq) {
   fprintf(stderr, ":::: FASTQ stats ::::\n\n");
 
-  if (sim.process == PROCESS_SAMPLING_REUSE) {
-    fprintf(stderr, "file name : %s\n", sim.profile_fq);
+  if (sim->process == PROCESS_SAMPLING_REUSE) {
+    fprintf(stderr, "file name : %s\n", sim->profile_fq);
   } else {
-    fprintf(stderr, "file name : %s\n", fastq.file);
+    fprintf(stderr, "file name : %s\n", fastq->file);
     fprintf(stderr, "\n:: all reads ::\n");
-    fprintf(stderr, "read num. : %ld\n", fastq.num);
-    fprintf(stderr, "read total length : %lld\n", fastq.len_total);
-    fprintf(stderr, "read min length : %ld\n", fastq.len_min);
-    fprintf(stderr, "read max length : %ld\n", fastq.len_max);
+    fprintf(stderr, "read num. : %ld\n", fastq->num);
+    fprintf(stderr, "read total length : %lld\n", fastq->len_total);
+    fprintf(stderr, "read min length : %ld\n", fastq->len_min);
+    fprintf(stderr, "read max length : %ld\n", fastq->len_max);
   }
 
   fprintf(stderr, "\n:: filtered reads ::\n");
-  fprintf(stderr, "read num. : %ld\n", fastq.num_filtered);
-  fprintf(stderr, "read total length : %lld\n", fastq.len_total_filtered);
-  fprintf(stderr, "read min length : %ld\n", fastq.len_min_filtered);
-  fprintf(stderr, "read max length : %ld\n", fastq.len_max_filtered);
+  fprintf(stderr, "read num. : %ld\n", fastq->num_filtered);
+  fprintf(stderr, "read total length : %lld\n", fastq->len_total_filtered);
+  fprintf(stderr, "read min length : %ld\n", fastq->len_min_filtered);
+  fprintf(stderr, "read max length : %ld\n", fastq->len_max_filtered);
   fprintf(stderr, "read length mean (SD) : %f (%f)\n",
-    fastq.len_mean_filtered, fastq.len_sd_filtered);
+    fastq->len_mean_filtered, fastq->len_sd_filtered);
   fprintf(stderr, "read accuracy mean (SD) : %f (%f)\n",
-    fastq.accuracy_mean_filtered, fastq.accuracy_sd_filtered);
+    fastq->accuracy_mean_filtered, fastq->accuracy_sd_filtered);
   fprintf(stderr, "\n");
 }
 
@@ -90,24 +90,24 @@ void print_fastq_stats(sim_t sim, fastq_t fastq) {
 // Function: print_simulation_stats - Print Simulation Stats. //
 ////////////////////////////////////////////////////////////////
 
-void print_simulation_stats(sim_t sim, ref_t ref) {
-  sim.res_depth = (double)sim.res_len_total / ref.len;
-  sim.res_sub_rate = (double)sim.res_sub_num / sim.res_len_total;
-  sim.res_ins_rate = (double)sim.res_ins_num / sim.res_len_total;
-  sim.res_del_rate = (double)sim.res_del_num / sim.res_len_total;
+void print_simulation_stats(const sim_t *sim, const ref_t *ref) {
+  double res_depth = (double)sim->res_len_total / ref->len;
+  double res_sub_rate = (double)sim->res_sub_num / sim->res_len_total;
+  double res_ins_rate = (double)sim->res_ins_num / sim->res_len_total;
+  double res_del_rate = (double)sim->res_del_num / sim->res_len_total;
 
-  fprintf(stderr, ":::: Simulation stats (ref.%ld) ::::\n\n", ref.num);
-  fprintf(stderr, "read num. : %ld\n", sim.res_num);
-  fprintf(stderr, "depth : %lf\n", sim.res_depth);
+  fprintf(stderr, ":::: Simulation stats (ref.%ld) ::::\n\n", ref->num);
+  fprintf(stderr, "read num. : %ld\n", sim->res_num);
+  fprintf(stderr, "depth : %lf\n", res_depth);
   fprintf(stderr, "read length mean (SD) : %f (%f)\n",
-    sim.res_len_mean, sim.res_len_sd);
-  fprintf(stderr, "read length min : %ld\n", sim.res_len_min);
-  fprintf(stderr, "read length max : %ld\n", sim.res_len_max);
+    sim->res_len_mean, sim->res_len_sd);
+  fprintf(stderr, "read length min : %ld\n", sim->res_len_min);
+  fprintf(stderr, "read length max : %ld\n", sim->res_len_max);
   fprintf(stderr, "read accuracy mean (SD) : %f (%f)\n",
-    sim.res_accuracy_mean, sim.res_accuracy_sd);
-  fprintf(stderr, "substitution rate. : %f\n", sim.res_sub_rate);
-  fprintf(stderr, "insertion rate. : %f\n", sim.res_ins_rate);
-  fprintf(stderr, "deletion rate. : %f\n", sim.res_del_rate);
+    sim->res_accuracy_mean, sim->res_accuracy_sd);
+  fprintf(stderr, "substitution rate. : %f\n", res_sub_rate);
+  fprintf(stderr, "insertion rate. : %f\n", res_ins_rate);
+  fprintf(stderr, "deletion rate. : %f\n", res_del_rate);
   fprintf(stderr, "\n");
 }
 

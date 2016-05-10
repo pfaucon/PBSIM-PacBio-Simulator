@@ -22,9 +22,7 @@
 
 FILE *fp_filtered, *fp_stats, *fp_ref, *fp_fq, *fp_maf;
 struct fastq_t fastq;
-struct ref_t ref;
 struct mut_t mut;
-struct qc_t qc[94];
 struct model_qc_t model_qc[101];
 
 long freq_len[FASTQ_LEN_MAX + 1];
@@ -36,15 +34,16 @@ long freq_accuracy[100000 + 1];
 
 void parse_options(int argc, char** argv, sim_t *sim);
 void init_sim_res(sim_t *sim);
+int initialize_sim_process(sim_t *sim, fastq_t *fastq, qc_t *qc);
 int set_sim_param(sim_t *sim);
-int get_ref_inf(const sim_t *sim);
+int get_ref_inf(const sim_t *sim, ref_t *ref);
 int get_ref_seq(const sim_t *sim, ref_t *ref);
-int get_fastq_inf(const sim_t *sim);
+int get_fastq_inf(const sim_t *sim, const qc_t *qc);
 int set_model_qc(const sim_t *sim);
 int set_mut(sim_t *sim);
-int simulate_by_sampling(sim_t *sim, ref_t *ref, mut_t *mut, fastq_t *fastq);
-int simulate_by_model(sim_t *sim);
-int mutate(sim_t *sim);
+int simulate_by_sampling(sim_t *sim, ref_t *ref, mut_t *mut, fastq_t *fastq, qc_t *qc);
+int simulate_by_model(sim_t *sim, ref_t *ref, qc_t *qc);
+int mutate(sim_t *sim, ref_t *ref);
 
 /////////////////////////////////////////
 // Main                                //
@@ -56,12 +55,10 @@ int main (int argc, char** argv) {
   long rst1, rst2;
   long t1, t2;
   struct sim_t sim;
+  struct qc_t qc[94];
+  struct ref_t ref;
 
-  rst1 = get_time_cpu();
-  t1 = get_time();
-
-  memset(sim.set_flg, 0, sizeof(sim.set_flg));
-
+  ////// Check Input
   parse_options(argc, argv, &sim);
 
   if (argv[optind] == '\0') {
@@ -69,65 +66,20 @@ int main (int argc, char** argv) {
     exit(-1);
   }
 
+  ///// Initialize
+  rst1 = get_time_cpu();
+  t1 = get_time();
+  memset(sim.set_flg, 0, sizeof(sim.set_flg));
+
   // Quality code to error probability
   for (i=0; i<=93; i++) {
     qc[i].prob = pow(10, (double)i / -10);
     qc[i].character = (char)(i+33);
   }
 
-  // Setting of simulation parameters     
-  if (set_sim_param(&sim) == FAILED) {
+
+  if(initialize_sim_process(&sim, &fastq, qc) == FAILED)
     exit(-1);
-  }
-  print_sim_param(sim);
-
-  // FASTQ
-  if (sim.process == PROCESS_SAMPLING) {
-    if ((fp_filtered = tmpfile()) == NULL) {
-      fprintf(stderr, "ERROR: Cannot open temporary file\n");
-      return FAILED;
-    }
-
-    if (get_fastq_inf(&sim) == FAILED) {
-      exit(-1);
-    }
-    print_fastq_stats(sim, fastq);
-  } else if (sim.process == PROCESS_SAMPLING_STORE) {
-    if ((fp_filtered = fopen(sim.profile_fq, "w+")) == NULL) {
-      fprintf(stderr, "ERROR: Cannot open sample_profile\n");
-      return FAILED;
-    }
-    if ((fp_stats = fopen(sim.profile_stats, "w+")) == NULL) {
-      fprintf(stderr, "ERROR: Cannot open sample_profile\n");
-      return FAILED;
-    }
-
-    if (get_fastq_inf(&sim) == FAILED) {
-      exit(-1);
-    }
-    print_fastq_stats(sim, fastq);
-  } else if (sim.process == PROCESS_SAMPLING_REUSE) {
-    if ((fp_filtered = fopen(sim.profile_fq, "r")) == NULL) {
-      fprintf(stderr, "ERROR: Cannot open sample_profile\n");
-      return FAILED;
-    }
-    if ((fp_stats = fopen(sim.profile_stats, "r")) == NULL) {
-      fprintf(stderr, "ERROR: Cannot open sample_profile\n");
-      return FAILED;
-    }
-
-    if (get_fastq_inf(&sim) == FAILED) {
-      exit(-1);
-    }
-    print_fastq_stats(sim, fastq);
-  }
-
-  // Quality code model
-  if (sim.process == PROCESS_MODEL) {
-    if (set_model_qc(&sim) == FAILED) {
-      exit(-1);
-    }
-  }
 
   // Reference sequence
   if ((ref.file = (char *)malloc(strlen(argv[optind]) + 1)) == 0) {
@@ -136,7 +88,7 @@ int main (int argc, char** argv) {
   }
   strcpy(ref.file, argv[optind]);
 
-  if (get_ref_inf(&sim) == FAILED) {
+  if (get_ref_inf(&sim, &ref) == FAILED) {
     exit(-1);
   }
 
@@ -162,22 +114,23 @@ int main (int argc, char** argv) {
     sprintf(sim.outfile_maf, "%s_%04d.maf", sim.prefix, ref.num);
     if ((fp_maf = fopen(sim.outfile_maf, "w")) == NULL) {
       fprintf(stderr, "ERROR: Cannot open output file: %s\n", sim.outfile_maf);
+      fclose(fp_fq);
       return FAILED;
     }
 
     sim.len_quota = (long long)(sim.depth * ref.len);
 
     if (sim.process == PROCESS_MODEL) {
-      if (simulate_by_model(&sim) == FAILED) {
+      if (simulate_by_model(&sim, &ref, qc) == FAILED) {
         exit(-1);
       }
     } else {
-      if (simulate_by_sampling(&sim, &ref, &mut, &fastq) == FAILED) {
+      if (simulate_by_sampling(&sim, &ref, &mut, &fastq, qc) == FAILED) {
         exit(-1);
       }
     }
 
-    print_simulation_stats(sim, ref);
+    print_simulation_stats(&sim, &ref);
 
     fclose(fp_fq);
     fclose(fp_maf);
@@ -196,6 +149,57 @@ int main (int argc, char** argv) {
   fprintf(stderr, "Elapsed time(s) : %d\n", t2 - t1);
 
   return(0);
+}
+
+///////////////////////////////////////////////////////////////
+// Function: initialize_sim_process - perform the sim process requested //
+///////////////////////////////////////////////////////////////
+
+int initialize_sim_process(sim_t *sim, fastq_t *fastq, qc_t *qc)
+{
+// Setting of simulation parameters     
+  if (set_sim_param(sim) == FAILED) {
+    exit(-1);
+  }
+  print_sim_param(sim);
+
+  switch(sim->process){
+    case PROCESS_SAMPLING:
+	    if ((fp_filtered = tmpfile()) == NULL) {
+	      fprintf(stderr, "ERROR: Cannot open temporary file\n");
+	      return FAILED;
+	    }
+      	break;
+    case PROCESS_SAMPLING_STORE:
+	     if ((fp_filtered = fopen(sim->profile_fq, "w+")) == NULL) {
+	      fprintf(stderr, "ERROR: Cannot open filtered sample_profile\n");
+	      return FAILED;
+	    }
+	    if ((fp_stats = fopen(sim->profile_stats, "w+")) == NULL) {
+	      fprintf(stderr, "ERROR: Cannot open stats sample_profile\n");
+	      return FAILED;
+	    }
+      	break;
+    case PROCESS_SAMPLING_REUSE:
+	    if ((fp_filtered = fopen(sim->profile_fq, "r")) == NULL) {
+	      fprintf(stderr, "ERROR: Cannot open sample_profile\n");
+	      return FAILED;
+	    }
+	    if ((fp_stats = fopen(sim->profile_stats, "r")) == NULL) {
+	      fprintf(stderr, "ERROR: Cannot open sample_profile\n");
+	      return FAILED;
+	    }
+      	break;
+    case PROCESS_MODEL:
+      	break;
+  }
+
+  if (get_fastq_inf(sim, qc) == FAILED) {
+    return FAILED;
+  }
+  print_fastq_stats(sim, fastq);
+
+  return SUCCEEDED;
 }
 
 ///////////////////////////////////////////////////////
@@ -419,56 +423,56 @@ void parse_options(int argc, char** argv, sim_t *sim)
 // Function: get_ref_inf - Get reference information //
 ///////////////////////////////////////////////////////
 
-int get_ref_inf(const sim_t *sim) {
+int get_ref_inf(const sim_t *sim, ref_t *ref) {
   FILE *fp;
   char line[BUF_SIZE];
-  int ret;
   long max_len = 0;
+  int ret;
 
   fprintf(stderr, ":::: Reference stats ::::\n\n");
-  fprintf(stderr, "file name : %s\n", ref.file);
+  fprintf(stderr, "file name : %s\n", ref->file);
   fprintf(stderr, "\n");
 
-  if ((fp = fopen(ref.file, "r")) == NULL) {
-    fprintf(stderr, "ERROR: Cannot open file: %s\n", ref.file);
+  if ((fp = fopen(ref->file, "r")) == NULL) {
+    fprintf(stderr, "ERROR: Cannot open file: %s\n", ref->file);
     return FAILED;
   }
 
-  ref.num_seq = 0;
-  ref.len = 0;
+  ref->num_seq = 0;
+  ref->len = 0;
 
   while (fgets(line, BUF_SIZE, fp) != NULL) {
     ret = trim(line);
 
     if (line[0] == '>') {
-      if (ref.num_seq != 0) {
-        if (ref.len < REF_SEQ_LEN_MIN) {
+      if (ref->num_seq != 0) {
+        if (ref->len < REF_SEQ_LEN_MIN) {
           fprintf(stderr, "ERROR: Reference is too short. Acceptable length >= %ld.\n", REF_SEQ_LEN_MIN);
           return FAILED;
         }
-        fprintf(stderr, "ref.%d (len:%d) : %s\n", ref.num_seq, ref.len, ref.id);
+        fprintf(stderr, "ref.%d (len:%d) : %s\n", ref->num_seq, ref->len, ref->id);
         fclose(fp_ref);
-        if (ref.len > max_len) {
-          max_len = ref.len;
+        if (ref->len > max_len) {
+          max_len = ref->len;
         }
       }
 
-      ref.num_seq ++;
-      if (ref.num_seq > REF_SEQ_NUM_MAX) {
+      ref->num_seq ++;
+      if (ref->num_seq > REF_SEQ_NUM_MAX) {
         fprintf(stderr, "ERROR: References are too many. Max number of reference is %ld.\n", REF_SEQ_NUM_MAX);
         return FAILED;
       }
 
-      strncpy(ref.id, line + 1, REF_ID_LEN_MAX);
-      ref.id[REF_ID_LEN_MAX] = '\0';
+      strncpy(ref->id, line + 1, REF_ID_LEN_MAX);
+      ref->id[REF_ID_LEN_MAX] = '\0';
 
-      sprintf(sim->outfile_ref, "%s_%04d.ref", sim->prefix, ref.num_seq);
+      sprintf(sim->outfile_ref, "%s_%04d.ref", sim->prefix, ref->num_seq);
       if ((fp_ref = fopen(sim->outfile_ref, "w")) == NULL) {
         fprintf(stderr, "ERROR: Cannot open output file: %s\n", sim->outfile_ref);
         return FAILED;
       }
 
-      ref.len = 0;
+      ref->len = 0;
 
       while (ret != EXISTS_LINE_FEED) {
         if (fgets(line, BUF_SIZE, fp) == NULL) {
@@ -477,11 +481,11 @@ int get_ref_inf(const sim_t *sim) {
         ret = trim(line);
       }
 
-      fprintf(fp_ref, ">%s\n", ref.id);
+      fprintf(fp_ref, ">%s\n", ref->id);
     } else {
-      ref.len += strlen(line);
+      ref->len += strlen(line);
 
-      if (ref.len > REF_SEQ_LEN_MAX) {
+      if (ref->len > REF_SEQ_LEN_MAX) {
         fprintf(stderr, "ERROR: Reference is too long. Acceptable length <= %ld.\n", REF_SEQ_LEN_MAX);
         return FAILED;
       }
@@ -491,19 +495,19 @@ int get_ref_inf(const sim_t *sim) {
   }
   fclose(fp);
 
-  if (ref.len < REF_SEQ_LEN_MIN) {
+  if (ref->len < REF_SEQ_LEN_MIN) {
     fprintf(stderr, "ERROR: Reference is too short. Acceptable length >= %ld.\n", REF_SEQ_LEN_MIN);
     return FAILED;
   }
-  fprintf(stderr, "ref.%d (len:%d) : %s\n", ref.num_seq, ref.len, ref.id);
+  fprintf(stderr, "ref.%d (len:%d) : %s\n", ref->num_seq, ref->len, ref->id);
   fclose(fp_ref);
-  if (ref.len > max_len) {
-    max_len = ref.len;
+  if (ref->len > max_len) {
+    max_len = ref->len;
   }
 
   fprintf(stderr, "\n");
 
-  if ((ref.seq = (char *)malloc(max_len + 1)) == 0) {
+  if ((ref->seq = (char *)malloc(max_len + 1)) == 0) {
     fprintf(stderr, "ERROR: Cannot allocate memory.\n");
     return FAILED;
   }
@@ -533,6 +537,7 @@ int get_ref_seq(const sim_t *sim, ref_t *ref) {
     ret = trim(line);
 
     if (line[0] == '>') {
+      memcpy(ref->id, &line[1], strlen(line)-1);
       while (ret != EXISTS_LINE_FEED) {
         if (fgets(line, BUF_SIZE, fp) == NULL) {
           break;
@@ -557,7 +562,7 @@ int get_ref_seq(const sim_t *sim, ref_t *ref) {
 // Function: get_fastq_inf - Get FASTQ information //
 /////////////////////////////////////////////////////
 
-int get_fastq_inf(const sim_t *sim) {
+int get_fastq_inf(const sim_t *sim, const qc_t *qc) {
   FILE *fp;
   char *tp, *item;
   char line[BUF_SIZE];
@@ -944,7 +949,7 @@ int set_sim_param(sim_t *sim) {
 // Function: simulate_by_sampling - Simulate by model //
 ////////////////////////////////////////////////////////
 
-int simulate_by_sampling(sim_t *sim, ref_t *ref, mut_t *mut, fastq_t *fastq) {
+int simulate_by_sampling(sim_t *sim, ref_t *ref, mut_t *mut, fastq_t *fastq, qc_t *qc) {
   long len;
   long long len_total = 0;
   long sampling_num, sampling_interval, sampling_value, sampling_residue;
@@ -1010,7 +1015,7 @@ int simulate_by_sampling(sim_t *sim, ref_t *ref, mut_t *mut, fastq_t *fastq) {
           mut->tmp_len_max = sim->len_min;
         }
 
-        if (mutate(sim) == FAILED) {
+        if (mutate(sim, ref) == FAILED) {
           return FAILED;
         }
 
@@ -1124,7 +1129,7 @@ int simulate_by_sampling(sim_t *sim, ref_t *ref, mut_t *mut, fastq_t *fastq) {
 // Function: simulate_by_model - Simulate by Model //
 /////////////////////////////////////////////////////
 
-int simulate_by_model(sim_t *sim) {
+int simulate_by_model(sim_t *sim, ref_t *ref, qc_t *qc) {
   long len;
   long long len_total = 0;
   long num;
@@ -1306,7 +1311,7 @@ int simulate_by_model(sim_t *sim) {
     }
     mut.qc[num] = '\0';
 
-    if (mutate(sim) == FAILED) {
+    if (mutate(sim, ref) == FAILED) {
       return FAILED;
     }
 
@@ -1332,7 +1337,7 @@ int simulate_by_model(sim_t *sim) {
     accuracy = (int)(value * 100000 + 0.5);
     freq_accuracy[accuracy] ++;
 
-    sprintf(id, "S%ld_%ld", ref.num, sim->res_num);
+    sprintf(id, "S%ld_%ld", ref->num, sim->res_num);
     fprintf(fp_fq, "@%s\n%s\n+%s\n%s\n", id, mut.new_seq, id, mut.new_qc);
 
     digit_num1[0] = 3;
@@ -1347,11 +1352,11 @@ int simulate_by_model(sim_t *sim) {
     digit_num2[2] = count_digit(len);
     digit_num[2] = (digit_num1[2] >= digit_num2[2]) ? digit_num1[2] : digit_num2[2];
 
-    digit_num1[3] = count_digit(ref.len);
+    digit_num1[3] = count_digit(ref->len);
     digit_num2[3] = count_digit(len);
     digit_num[3] = (digit_num1[3] >= digit_num2[3]) ? digit_num1[3] : digit_num2[3];
 
-    fprintf(fp_maf, "a\ns %s", ref.id);
+    fprintf(fp_maf, "a\ns %s", ref->id);
     while (digit_num1[0] ++ < digit_num[0]) {
       fprintf(fp_maf, " ");
     }
@@ -1366,7 +1371,7 @@ int simulate_by_model(sim_t *sim) {
     while (digit_num1[3] ++ < digit_num[3]) {
       fprintf(fp_maf, " ");
     }
-    fprintf(fp_maf, " %ld %s\n", ref.len, mut.maf_ref_seq);
+    fprintf(fp_maf, " %ld %s\n", ref->len, mut.maf_ref_seq);
     fprintf(fp_maf, "s %s", id);
     while (digit_num2[0] ++ < digit_num[0]) {
       fprintf(fp_maf, " ");
@@ -1466,7 +1471,7 @@ int set_mut(sim_t *sim) {
 // Function: mutate - Mutate read //
 ////////////////////////////////////
 
-int mutate(sim_t *sim) {
+int mutate(sim_t *sim, ref_t *ref) {
   char *line;
   char nt;
   long num;
@@ -1496,11 +1501,11 @@ int mutate(sim_t *sim) {
 
   len = strlen(mut.tmp_qc);
 
-  if (len >= ref.len) {
+  if (len >= ref->len) {
     offset = 0;
-    len = ref.len;
+    len = ref->len;
   } else {
-    offset = rand() % (ref.len - len + 1);
+    offset = rand() % (ref->len - len + 1);
   }
 
   mut.seq_left = offset + 1;
@@ -1510,14 +1515,14 @@ int mutate(sim_t *sim) {
     mut.seq_strand = '+';
 
     for (i=0; i<len; i++) {
-      nt = toupper(ref.seq[offset + i]);
+      nt = toupper(ref->seq[offset + i]);
       mut.seq[i] = nt;
     }
   } else {
     mut.seq_strand = '-';
 
     for (i=0; i<len; i++) {
-      nt = toupper(ref.seq[offset + i]);
+      nt = toupper(ref->seq[offset + i]);
 
       if (nt == 'A') {
         mut.seq[len-1-i] = 'T';

@@ -15,7 +15,6 @@ struct sim_t {
   int set_flg[20];
   long res_num;
   long long res_len_total; 
-  double res_depth;
   double res_accuracy_mean, res_accuracy_sd;
   long res_len_min, res_len_max; 
   double res_len_mean, res_len_sd; 
