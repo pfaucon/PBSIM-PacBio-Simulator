@@ -96,7 +96,7 @@ void print_simulation_stats(const sim_t *sim, const ref_t *ref) {
   double res_ins_rate = (double)sim->res_ins_num / sim->res_len_total;
   double res_del_rate = (double)sim->res_del_num / sim->res_len_total;
 
-  fprintf(stderr, ":::: Simulation stats (ref.%ld) ::::\n\n", ref->num);
+  fprintf(stderr, ":::: Simulation stats (ref.%ld - name: %s) ::::\n\n", ref->num, ref->id);
   fprintf(stderr, "read num. : %ld\n", sim->res_num);
   fprintf(stderr, "depth : %lf\n", res_depth);
   fprintf(stderr, "read length mean (SD) : %f (%f)\n",

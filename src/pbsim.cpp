@@ -10,6 +10,7 @@
 #include <math.h>
 #include <time.h>
 #include <limits.h>
+#include <algorithm> // min
 
 #include "defines.h"
 #include "structures.h"
@@ -58,6 +59,10 @@ int main (int argc, char** argv) {
   struct qc_t qc[94];
   struct ref_t ref;
 
+  rst1 = get_time_cpu();
+  t1 = get_time();
+  memset(sim.set_flg, 0, sizeof(sim.set_flg));
+  
   ////// Check Input
   parse_options(argc, argv, &sim);
 
@@ -67,17 +72,13 @@ int main (int argc, char** argv) {
   }
 
   ///// Initialize
-  rst1 = get_time_cpu();
-  t1 = get_time();
-  memset(sim.set_flg, 0, sizeof(sim.set_flg));
 
   // Quality code to error probability
   for (i=0; i<=93; i++) {
     qc[i].prob = pow(10, (double)i / -10);
     qc[i].character = (char)(i+33);
   }
-
-
+    
   if(initialize_sim_process(&sim, &fastq, qc) == FAILED)
     exit(-1);
 
@@ -87,6 +88,7 @@ int main (int argc, char** argv) {
     exit(-1);
   }
   strcpy(ref.file, argv[optind]);
+  fprintf(stderr, "!! ref file %s\n", ref.file);
 
   if (get_ref_inf(&sim, &ref) == FAILED) {
     exit(-1);
@@ -191,9 +193,14 @@ int initialize_sim_process(sim_t *sim, fastq_t *fastq, qc_t *qc)
 	    }
       	break;
     case PROCESS_MODEL:
+    	if(set_model_qc(sim) == FAILED)
+    	  return FAILED;
+    	  
+    	return SUCCEEDED;
       	break;
   }
 
+  // these happen only if we aren't using model-basedc
   if (get_fastq_inf(sim, qc) == FAILED) {
     return FAILED;
   }
@@ -434,7 +441,7 @@ int get_ref_inf(const sim_t *sim, ref_t *ref) {
   fprintf(stderr, "\n");
 
   if ((fp = fopen(ref->file, "r")) == NULL) {
-    fprintf(stderr, "ERROR: Cannot open file: %s\n", ref->file);
+    fprintf(stderr, "ERROR: Cannot open reference file: %s\n", ref->file);
     return FAILED;
   }
 
@@ -463,8 +470,8 @@ int get_ref_inf(const sim_t *sim, ref_t *ref) {
         return FAILED;
       }
 
-      strncpy(ref->id, line + 1, REF_ID_LEN_MAX);
-      ref->id[REF_ID_LEN_MAX] = '\0';
+      strncpy(ref->id, &line[1], REF_ID_LEN_MAX);
+      ref->id[std::min(REF_ID_LEN_MAX, (int)strlen(&line[1]))] = '\0';
 
       sprintf(sim->outfile_ref, "%s_%04d.ref", sim->prefix, ref->num_seq);
       if ((fp_ref = fopen(sim->outfile_ref, "w")) == NULL) {
@@ -529,7 +536,7 @@ int get_ref_seq(const sim_t *sim, ref_t *ref) {
   sprintf(sim->outfile_ref, "%s_%04d.ref", sim->prefix, ref->num);
 
   if ((fp = fopen(sim->outfile_ref, "r")) == NULL) {
-    fprintf(stderr, "ERROR: Cannot open file: %s\n", sim->outfile_ref);
+    fprintf(stderr, "ERROR: Cannot open outfile_ref file: %s\n", sim->outfile_ref);
     return FAILED;
   }
 
@@ -537,7 +544,8 @@ int get_ref_seq(const sim_t *sim, ref_t *ref) {
     ret = trim(line);
 
     if (line[0] == '>') {
-      memcpy(ref->id, &line[1], strlen(line)-1);
+      memcpy(ref->id, &line[1], strlen(line)-1);      
+      ref->id[std::min(REF_ID_LEN_MAX, (int)strlen(&line[1]))] = '\0';
       while (ret != EXISTS_LINE_FEED) {
         if (fgets(line, BUF_SIZE, fp) == NULL) {
           break;
@@ -619,7 +627,7 @@ int get_fastq_inf(const sim_t *sim, const qc_t *qc) {
     }
   } else {
     if ((fp = fopen(fastq.file, "r")) == NULL) {
-      fprintf(stderr, "ERROR: Cannot open file: %s\n", fastq.file);
+      fprintf(stderr, "ERROR: Cannot open fastq file: %s\n", fastq.file);
       return FAILED;
     }
 
@@ -1623,7 +1631,7 @@ int set_model_qc(const sim_t *sim) {
   int i, j;
 
   if ((fp = fopen(sim->model_qc_file, "r")) == NULL) {
-    fprintf(stderr, "ERROR: Cannot open file: %s\n", sim->model_qc_file);
+    fprintf(stderr, "ERROR: Cannot open model_qc file: %s\n", sim->model_qc_file);
     return FAILED;
   }
 
