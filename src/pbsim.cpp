@@ -360,6 +360,7 @@ void parse_options(int argc, char** argv, sim_t *sim)
         strcpy(tmp_buf, optarg);
         num = 0;
         tp = strtok(tmp_buf, ":");
+        free(tmp_buf);
         while (num < 3) {
           if (tp == NULL) {
             fprintf(stderr, "ERROR (difference-ratio: %s): Format is sub:ins:del.\n", optarg);
@@ -455,6 +456,7 @@ int get_ref_inf(const sim_t *sim, ref_t *ref) {
       if (ref->num_seq != 0) {
         if (ref->len < REF_SEQ_LEN_MIN) {
           fprintf(stderr, "ERROR: Reference is too short. Acceptable length >= %ld.\n", REF_SEQ_LEN_MIN);
+          fclose(fp);
           return FAILED;
         }
         fprintf(stderr, "ref.%d (len:%d) : %s\n", ref->num_seq, ref->len, ref->id);
@@ -467,6 +469,7 @@ int get_ref_inf(const sim_t *sim, ref_t *ref) {
       ref->num_seq ++;
       if (ref->num_seq > REF_SEQ_NUM_MAX) {
         fprintf(stderr, "ERROR: References are too many. Max number of reference is %ld.\n", REF_SEQ_NUM_MAX);
+        fclose(fp);
         return FAILED;
       }
 
@@ -476,6 +479,7 @@ int get_ref_inf(const sim_t *sim, ref_t *ref) {
       sprintf(sim->outfile_ref, "%s_%04d.ref", sim->prefix, ref->num_seq);
       if ((fp_ref = fopen(sim->outfile_ref, "w")) == NULL) {
         fprintf(stderr, "ERROR: Cannot open output file: %s\n", sim->outfile_ref);
+        fclose(fp);
         return FAILED;
       }
 
@@ -494,6 +498,7 @@ int get_ref_inf(const sim_t *sim, ref_t *ref) {
 
       if (ref->len > REF_SEQ_LEN_MAX) {
         fprintf(stderr, "ERROR: Reference is too long. Acceptable length <= %ld.\n", REF_SEQ_LEN_MAX);
+        fclose(fp);
         return FAILED;
       }
 
@@ -644,6 +649,7 @@ int get_fastq_inf(const sim_t *sim, const qc_t *qc) {
 
           if (len > FASTQ_LEN_MAX) {
             fprintf(stderr, "ERROR: fastq is too long. Max acceptable length is %ld.\n", FASTQ_LEN_MAX);
+            fclose(fp);
             return FAILED;
           }
 
@@ -652,6 +658,7 @@ int get_fastq_inf(const sim_t *sim, const qc_t *qc) {
 
           if (fastq.num > FASTQ_NUM_MAX) {
             fprintf(stderr, "ERROR: fastq is too many. Max acceptable number is %ld.\n", FASTQ_NUM_MAX);
+            fclose(fp);
             return FAILED;
           }
 
@@ -699,6 +706,7 @@ int get_fastq_inf(const sim_t *sim, const qc_t *qc) {
           len += strlen(line);
           if (len > FASTQ_LEN_MAX) {
             fprintf(stderr, "ERROR: fastq is too long. Max acceptable length is %ld.\n", FASTQ_LEN_MAX);
+            fclose(fp);
             return FAILED;
           }
           strcat(qc_tmp, line);
