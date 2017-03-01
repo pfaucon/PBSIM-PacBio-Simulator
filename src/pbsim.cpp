@@ -1438,12 +1438,12 @@ int simulate_by_model(sim_t *sim, ref_t *ref, qc_t *qc) {
 /////////////////////////////////////////////////////////////////
 
 int set_mut(sim_t *sim) {
-  mut.sub_nt_a = "TGC";
-  mut.sub_nt_t = "AGC";
-  mut.sub_nt_g = "ATC";
-  mut.sub_nt_c = "ATG";
-  mut.sub_nt_n = "ATGC";
-  mut.ins_nt = "ATGC";
+  mut.sub_nt_a = (char *)"TGC";
+  mut.sub_nt_t = (char *)"AGC";
+  mut.sub_nt_g = (char *)"ATC";
+  mut.sub_nt_c = (char *)"ATG";
+  mut.sub_nt_n = (char *)"ATGC";
+  mut.ins_nt   = (char *)"ATGC";
 
   if ((mut.qc = (char *)malloc(sim->len_max + 1)) == 0) {
     fprintf(stderr, "ERROR: Cannot allocate memory.\n");
