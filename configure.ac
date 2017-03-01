@@ -2,10 +2,10 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT(FULL-PACKAGE-NAME, VERSION, BUG-REPORT-ADDRESS)
+AC_INIT([pbsim], [1.0.0], [pfaucon@asu.edu])
 AC_CONFIG_SRCDIR([src/pbsim.cpp])
 AC_CONFIG_HEADER([config.h])
-AM_INIT_AUTOMAKE(pbsim,1.0.0)
+AM_INIT_AUTOMAKE
 
 # Checks for programs.
 AC_PROG_CXX
