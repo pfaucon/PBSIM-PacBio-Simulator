@@ -19,9 +19,15 @@ sampling-based and model-based simulations are implemented.
 Building PBSIM
 ================
 
-To build PBSIM run:
-  autoconf -i; ./configure; make
-  
+To build PBSIM run;
+
+```bash
+
+ autoreconf -i
+ ./configure
+ make
+ ```
+ 
 A new executable pbsim will be available in the src/ directory
 
 Run PBSIM with sample data
