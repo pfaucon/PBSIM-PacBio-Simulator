@@ -1,10 +1,10 @@
-0. This Repository
+This Repository
 ==================
 
 This repository was created because the Google Code repository provided by the original authors is not being maintained, and Google Code is now defunct. 
 
 
-1. About PBSIM
+About PBSIM
 ==============
 
 PacBio sequencers produce two types of characteristic reads as below.
@@ -16,7 +16,15 @@ We have developed a PacBio reads simulater (called PBSIM) in which
 sampling-based and model-based simulations are implemented.
 
 
-2. Run PBSIM with sample data
+Building PBSIM
+================
+
+To build PBSIM run:
+  autoconf -i; ./configure; make
+  
+A new executable pbsim will be available in the src/ directory
+
+Run PBSIM with sample data
 =============================
 
 To run model-based simulation:
@@ -79,7 +87,7 @@ option as below. You can save time to parse "sample/sample.fastq".
           sample/sample.fasta
 
 
-3. Model-based simulation
+Model-based simulation
 =========================
 
 For each read, the length is randomly drawn from the log-normal distribution
@@ -124,7 +132,7 @@ the restriction of accuracy is not strict, and can be used in only case
 of CLR reads.
 
 
-4. Sampling-based simulation
+Sampling-based simulation
 ============================
 
 The lengths and quality scores of reads  are simulated by randomly
@@ -135,7 +143,7 @@ based simulation. The restriction of length and accuracy are also
 the same as model-based simulation.
 
 
-5. Input files
+Input files
 ==============
 
 PBSIM requires reference sequences in the single- or multi-FASTA Format. 
@@ -145,7 +153,7 @@ specified with the --sample-fastq option.
 FASTQ format must be Sanger standard (fastq-sanger).
 
 
-6. Output files
+Output files
 ===============
 
 If a reference sequence file is multi-FASTA format, simulated datasets
@@ -161,7 +169,7 @@ simulated reads in the MAF format.
 "sd" is prefix which can be specified with the --prefix option.
 
 
-7. Quality profile
+Quality profile
 ==================
 
 Quality profiles are derived from frequencies of real quality scores 
@@ -173,7 +181,7 @@ In "data/model_qc_ccs", 1st column is accuracies of a read, and 2nd-95th
 columns are proportions of phred quality scores (0-93).
 
 
-8. Runtime and memory
+Runtime and memory
 =====================
 
 When a coverage depth is 100x and a length of reference sequence is about 10M,
@@ -185,7 +193,8 @@ PBSIM requires memory of the length of reference sequence plus several mega
 bytes. 
 
 
-9. Contributors
+Contributors
 =====================
 @kiwiroy - autotools and warning corrections
+
 @jumpinsky - fixed memory leaks
