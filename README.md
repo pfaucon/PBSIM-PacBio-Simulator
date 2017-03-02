@@ -184,3 +184,8 @@ reference sequence.
 PBSIM requires memory of the length of reference sequence plus several mega
 bytes. 
 
+
+9. Contributors
+=====================
+@kiwiroy - autotools and warning corrections
+@jumpinsky - fixed memory leaks
