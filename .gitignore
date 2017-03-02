@@ -1,2 +1,14 @@
+## autotools
+aclocal.m4
+autom4te.cache
+compile
+config.*
+configure
+Makefile.in
+missing
+stamp-h1
+*.log
+*/.deps/*
+
+## VS
 *.userprefs
-src/bin/Debug/*
