@@ -28,6 +28,8 @@ struct model_qc_t model_qc[101];
 
 long freq_len[FASTQ_LEN_MAX + 1];
 long freq_accuracy[100000 + 1];
+const char *versionString = "1.0.4";
+
 
 /////////////////////////////////////////
 // Prototypes of functions             //
@@ -242,6 +244,7 @@ void parse_options(int argc, char** argv, sim_t *sim)
     {"sample-profile-id", 1, NULL, 0},
     {"seed", 1, NULL, 0},
     {"help", 0, NULL, 0},
+    {"version", 0, NULL, 0},
     {0, 0, 0, 0}
   };
 
@@ -416,8 +419,12 @@ void parse_options(int argc, char** argv, sim_t *sim)
         seed = (unsigned int)atoi(optarg);
         break;
 
-      case 16: //help
+      case 16: // help
         print_help();
+        exit(0);
+
+      case 17: // version
+        printf("pbsim %s\n", versionString);
         exit(0);
 
       defalut:
