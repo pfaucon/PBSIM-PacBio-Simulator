@@ -241,6 +241,7 @@ void parse_options(int argc, char** argv, sim_t *sim)
     {"prefix", 1, NULL, 0},
     {"sample-profile-id", 1, NULL, 0},
     {"seed", 1, NULL, 0},
+    {"help", 0, NULL, 0},
     {0, 0, 0, 0}
   };
 
@@ -414,6 +415,10 @@ void parse_options(int argc, char** argv, sim_t *sim)
       case 15:
         seed = (unsigned int)atoi(optarg);
         break;
+
+      case 16: //help
+        print_help();
+        exit(0);
 
       defalut:
         break;
