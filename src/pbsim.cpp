@@ -68,7 +68,7 @@ int main (int argc, char** argv) {
   ////// Check Input
   parse_options(argc, argv, &sim);
 
-  if (argv[optind] == '\0') {
+  if (argv[optind] == NULL) {
     print_help();
     exit(-1);
   }
@@ -364,7 +364,6 @@ void parse_options(int argc, char** argv, sim_t *sim)
         strcpy(tmp_buf, optarg);
         num = 0;
         tp = strtok(tmp_buf, ":");
-        free(tmp_buf);
         while (num < 3) {
           if (tp == NULL) {
             fprintf(stderr, "ERROR (difference-ratio: %s): Format is sub:ins:del.\n", optarg);
@@ -389,6 +388,7 @@ void parse_options(int argc, char** argv, sim_t *sim)
           num ++;
           tp = strtok(NULL, ":");
         }
+        free(tmp_buf);
         break;
 
       case 12:
